@@ -15,6 +15,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 error Raffle__NotEnoughETHEntered();
 error Raffle__TransferFailed();
 error Raffle__NotOpen();
+error Raffle__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 raffleState);
 
 contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 	/* Type declarations */
@@ -44,6 +45,7 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 	event RequestedRaffleWinner(uint256 indexed requestId);
 	event WinnerPicked(address indexed winner);
 
+	/* Functions */
 	constructor(address vrfCoordinatorV2, uint256 entranceFee, bytes32 gasLane, uint64 subscriptionId, uint16 callbackGasLimit, uint256 interval) VRFConsumerBaseV2(vrfCoordinatorV2) {
 		i_entranceFee = entranceFee;
 		i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
@@ -59,7 +61,7 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 		if(msg.value < i_entranceFee) {
 			revert Raffle__NotEnoughETHEntered();
 		}
-		if(s_raffleState !== RaffleState.OPEN) {
+		if(s_raffleState != RaffleState.OPEN) {
 			revert Raffle__NotOpen();
 		}
 
@@ -67,19 +69,20 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 		emit RaffleEnter(msg.sender);
 	}
 
-	function checkUpkeep(bytes calldata /* checkData */) public override returns (bool upkeepNeeded, bytes memory /* performData */) {
+	function checkUpkeep(bytes memory /* checkData */) public override returns (bool upkeepNeeded, bytes memory /* performData */) {
 		bool isOpen = s_raffleState == RaffleState.OPEN;
 		bool timePassed = ((block.timestamp - s_lastTimestamp) > i_interval);
 		bool hasPlayers = s_players.length > 0;
 		bool hasBalance = address(this).balance > 0;
 
-		upkeepNeeded = isOpen && timePassed && hasPlayers && hasBalance;
+		upkeepNeeded = isOpen && timePassed && hasPlayers && hasBalance; // this will automatically be returned.
 	}
 
-	function requestRandomWinner() external { // external functions are a little bit cheaper.
-		// Request random number
-		// Once we get it, do something with it.
-		// Therefore, it is a 2 transaction process.
+	function performUpkeep(bytes calldata /* performData */) external override { // external functions are a little bit cheaper.
+		(bool upkeepNeeded, ) = checkUpkeep("");
+		if(!upkeepNeeded) {
+			revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
+		}
 
 		s_raffleState = RaffleState.CALCULATING;
 
@@ -104,7 +107,6 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 	}
 
 	/* View / pure functions */
-
 	function getEntranceFee() public view returns (uint256) {
 		return i_entranceFee;
 	}
@@ -115,5 +117,25 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
 	function getRecentWinner() public view returns(address) {
 		return s_recentWinner;
+	}
+
+	function getRaffleState() public view returns(RaffleState) {
+		return s_raffleState;
+	}
+
+	function getNumWords() public pure returns(uint256) {
+		return NUM_WORDS;
+	}
+
+	function getNumberOfPlayers() public view returns(uint256) {
+		return s_players.length;
+	}
+
+	function getLastTimestamp() public view returns(uint256) {
+		return s_lastTimestamp;
+	}
+
+	function getRequestConfirmations() public pure returns(uint256) {
+		return REQUEST_CONFIRMATIONS;
 	}
 }
