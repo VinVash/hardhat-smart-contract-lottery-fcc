@@ -87,6 +87,8 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 		s_raffleState = RaffleState.CALCULATING;
 
 		uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
+		
+		// This is redundant. The "requestRandomWords" emits an event internally.
 		emit RequestedRaffleWinner(requestId);
 	}
 
@@ -137,5 +139,9 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
 	function getRequestConfirmations() public pure returns(uint256) {
 		return REQUEST_CONFIRMATIONS;
+	}
+
+	function getInterval() public view returns(uint256) {
+		return i_interval;
 	}
 }
