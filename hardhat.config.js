@@ -6,6 +6,9 @@ require("hardhat-gas-reporter")
 require("hardhat-contract-sizer")
 require("dotenv").config()
 
+// migrate to Goerli, it is a Rinkeby testnet error.
+// Here is the deployed contract address on Rinkeby testnet: 0x566F98dAEc6FF6873aD3e89C5FD7D64Ba1333cA9
+
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || process.env.ALCHEMY_MAINNET_RPC_URL || "https://eth-mainnet.alchemyapi.io/v2/your-api-key";
 const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "https://eth-rinkeby.alchemyapi.io/v2/your-api-key";
 const KOVAN_RPC_URL = process.env.KOVAN_RPC_URL || "https://eth-kovan.alchemyapi.io/v2/your-api-key";
@@ -26,13 +29,12 @@ module.exports = {
 	networks: {
 		hardhat: {
 			chainId: 31337,
-			blockConfirmations: 1,
 		},
 		rinkeby: {
 			chainId: 4,
-			blockConfirmations: 6,
 			url: RINKEBY_RPC_URL,
 			accounts: [PRIVATE_KEY],
+			saveDeployments: true,
 		}
 	},
 	gasReporter: {
@@ -52,6 +54,6 @@ module.exports = {
   	},
   },
   mocha: {
-  	timeout: 200000, // 200 seconds max
+  	timeout: 300000, // 300 seconds max
   }
 };
